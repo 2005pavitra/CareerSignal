@@ -1,18 +1,9 @@
-import { knownSkills } from "./resumeParser.js";
+import { extractSkills } from "./resumeParser.js";
 
 const isPreferredSection = (line) => /preferred|nice to have|bonus|plus|good to have/i.test(line);
 const isRequirementSection = (line) => /requirement|qualification|skill|experience|must have|what we are looking for/i.test(line);
 const isResponsibilityLine = (line) => /^[-*•–—]|\bresponsibilit|\byou will\b|\bwhat you.{0,3}ll do\b/i.test(line);
 const isSectionHeading = (line) => /^(required skills?|preferred skills?|nice to have|requirements?|qualifications?|responsibilities|what you.{0,3}ll do|what you will do)$/i.test(line);
-
-const extractSkills = (text) => {
-    if (!text) return [];
-    const searchableText = ` ${text.toLowerCase()} `;
-    return knownSkills.filter((skill) => {
-        const regex = new RegExp(`(?:^|[\\s,;()/\\[\\]{}:.-])${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[\\s,;()/\\[\\]{}:.-])`, "i");
-        return regex.test(searchableText);
-    });
-};
 
 export const parseJobDescriptionText = (rawText) => {
     const lines = rawText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);

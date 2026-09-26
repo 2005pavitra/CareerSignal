@@ -13,19 +13,24 @@ const includesSkill = (skills, requiredSkill) => {
         if (normalizedSkill.includes(normalizedRequired) || normalizedRequired.includes(normalizedSkill)) return true;
 
         // Semantic aliases
-        if ((normalizedRequired === "restful apis" || normalizedRequired === "rest api") &&
+        if ((normalizedRequired === "restful apis" || normalizedRequired === "rest api" || normalizedRequired === "rest") &&
             (normalizedSkill === "restful apis" || normalizedSkill === "rest api" || normalizedSkill === "rest")) return true;
         if (normalizedRequired === "git" && (normalizedSkill === "git" || normalizedSkill === "github")) return true;
         if (normalizedRequired === "kafka" && (normalizedSkill === "kafka" || normalizedSkill === "apache kafka")) return true;
-        if (normalizedRequired === "react" && (normalizedSkill === "react" || normalizedSkill === "react.js" || normalizedSkill === "react 19")) return true;
+        if (normalizedRequired === "react" && (normalizedSkill === "react" || normalizedSkill === "react.js" || normalizedSkill === "react 19" || normalizedSkill === "reactjs")) return true;
         if (normalizedRequired === "mongodb" && (normalizedSkill === "mongodb" || normalizedSkill === "mongoose")) return true;
+        if ((normalizedRequired === "authentication" || normalizedRequired === "authorization" || normalizedRequired === "auth") &&
+            (normalizedSkill === "jwt" || normalizedSkill === "oauth" || normalizedSkill === "authentication" || normalizedSkill === "authorization")) return true;
+        if ((normalizedRequired === "unit testing" || normalizedRequired === "testing" || normalizedRequired === "unit tests") &&
+            (normalizedSkill === "jest" || normalizedSkill === "pytest" || normalizedSkill === "unit testing" || normalizedSkill === "integration testing")) return true;
+        if (normalizedRequired === "fullstack" && (normalizedSkill === "fullstack" || normalizedSkill === "mern")) return true;
         return false;
     });
 };
 
 const buildRequirementMatches = (requiredSkills, preferredSkills, resumeSkills, projectSkills, githubSkills, codingEvidence, parsedProfile = null) => {
     const createMatch = (requirement, category, priority) => {
-        const inResume = includesSkill(resumeSkills, requirement);
+        let inResume = includesSkill(resumeSkills, requirement);
         let inProject = includesSkill(projectSkills, requirement);
         const inGitHub = includesSkill(githubSkills, requirement);
         const isDsaRequirement = /data structure|algorithm|dsa|problem solving|competitive/i.test(requirement);
@@ -38,6 +43,83 @@ const buildRequirementMatches = (requiredSkills, preferredSkills, resumeSkills, 
             );
             if (hasApiFramework || projectTextMentionsApi) {
                 inProject = true;
+            }
+        }
+
+        // If requirement is authentication / authorization
+        if (!inProject && /auth/i.test(requirement)) {
+            const projectMentionsAuth = (parsedProfile?.projects || []).some((p) =>
+                /jwt|oauth|auth|unauthorized|session|token/i.test(p.description || "") || (p.bullets || []).some((b) => /jwt|oauth|auth|unauthorized|session|token/i.test(b))
+            );
+            if (projectSkills.some((s) => ["jwt", "oauth"].includes(s.toLowerCase())) || projectMentionsAuth) {
+                inProject = true;
+            }
+        }
+
+        // If requirement is performance tuning or profiling
+        if (/performance|profiling|latency|tuning/i.test(requirement)) {
+            const hasPerfEvidence = (parsedProfile?.projects || []).some((p) =>
+                /latency|optimi|blocking|speed|profiling|tuning|throughput|reduction/i.test(p.description || "") ||
+                (p.bullets || []).some((b) => /latency|optimi|blocking|speed|profiling|tuning|throughput|reduction/i.test(b))
+            );
+            if (hasPerfEvidence) {
+                inProject = true;
+            }
+            if (/latency|optimi|blocking|speed|profiling|tuning|throughput|reduction/i.test(parsedProfile?.rawText || "")) {
+                inResume = true;
+            }
+        }
+
+        // If requirement is workflow automation
+        if (/automation|workflow/i.test(requirement)) {
+            const hasAutomationEvidence = (parsedProfile?.projects || []).some((p) =>
+                /auto|pipeline|schedul|combat|eliminat.*manual/i.test(p.description || "") ||
+                (p.bullets || []).some((b) => /auto|pipeline|schedul|combat|eliminat.*manual/i.test(b))
+            );
+            if (hasAutomationEvidence) {
+                inProject = true;
+            }
+            if (/auto|pipeline|schedul|eliminat.*manual/i.test(parsedProfile?.rawText || "")) {
+                inResume = true;
+            }
+        }
+
+        // If requirement is frontend or UI
+        if (requirement === "frontend" || requirement === "ui") {
+            const hasFrontendTech = projectSkills.some((s) => ["react", "vue", "angular", "tailwind", "tailwind css", "css", "html", "html5", "vite"].includes(s.toLowerCase()));
+            const projectMentionsUi = (parsedProfile?.projects || []).some((p) =>
+                /frontend|ui|interface|dashboard|viewer|design|glassmorphism/i.test(p.description || "") ||
+                (p.bullets || []).some((b) => /frontend|ui|interface|dashboard|viewer|design|glassmorphism/i.test(b))
+            );
+            if (hasFrontendTech || projectMentionsUi) inProject = true;
+            if (resumeSkills.some((s) => ["react", "vite", "tailwind", "css", "html"].includes(s.toLowerCase())) || /design system|ui|frontend|glassmorphism/i.test(parsedProfile?.rawText || "")) {
+                inResume = true;
+            }
+        }
+
+        // If requirement is backend
+        if (requirement === "backend") {
+            const hasBackendTech = projectSkills.some((s) => ["node.js", "express", "fastapi", "django", "flask", "spring boot", "mongodb", "redis", "kafka"].includes(s.toLowerCase()));
+            const projectMentionsBackend = (parsedProfile?.projects || []).some((p) =>
+                /backend|server|api|database|microservice|distributed/i.test(p.description || "") ||
+                (p.bullets || []).some((b) => /backend|server|api|database|microservice|distributed/i.test(b))
+            );
+            if (hasBackendTech || projectMentionsBackend) inProject = true;
+            if (resumeSkills.some((s) => ["node.js", "express", "mongodb", "redis", "kafka"].includes(s.toLowerCase()))) {
+                inResume = true;
+            }
+        }
+
+        // If requirement is fullstack
+        if (requirement === "fullstack") {
+            const hasFullstackMention = (parsedProfile?.projects || []).some((p) =>
+                /full-?stack|mern/i.test(p.description || "") || (p.bullets || []).some((b) => /full-?stack|mern/i.test(b))
+            );
+            const hasBothFrontAndBack = projectSkills.some((s) => ["react", "vue", "vite", "tailwind"].includes(s.toLowerCase())) &&
+                projectSkills.some((s) => ["node.js", "express", "mongodb"].includes(s.toLowerCase()));
+            if (hasFullstackMention || hasBothFrontAndBack) inProject = true;
+            if (resumeSkills.includes("fullstack") || (resumeSkills.includes("react") && resumeSkills.includes("node.js"))) {
+                inResume = true;
             }
         }
 
@@ -217,13 +299,25 @@ const buildProjectRelevance = (parsedProfile, githubSnapshot, requiredSkills, pr
 
     const scoredProjects = candidateProjects.map((project) => {
         const projectTech = (project.technologies || []).map((t) => t.toLowerCase());
-        const matchedTech = allTargetSkills.filter((skill) =>
-            projectTech.some((t) => t.includes(normalize(skill)) || normalize(skill).includes(t))
-        );
+        const projectFullText = `${project.name} ${project.description || ""} ${(project.bullets || []).join(" ")}`.toLowerCase();
 
-        let score = matchedTech.length * 20;
+        const matchedTech = allTargetSkills.filter((skill) => {
+            if (includesSkill(projectTech, skill)) return true;
+            if (skill === "restful apis" && (projectTech.includes("express") || projectTech.includes("node.js") || /api|rest/i.test(projectFullText))) return true;
+            if (skill === "authentication" && (projectTech.includes("jwt") || /auth|jwt/i.test(projectFullText))) return true;
+            if (skill === "ai" && (projectTech.includes("groq") || projectTech.includes("gemini") || /llm|ai\b/i.test(projectFullText))) return true;
+            if (skill === "workflow automation" && /auto|pipeline|schedul/i.test(projectFullText)) return true;
+            if (skill === "performance tuning" && /latency|blocking|speed|optimi|tuning/i.test(projectFullText)) return true;
+            if (skill === "profiling" && /profiling|latency|speed|tuning/i.test(projectFullText)) return true;
+            if (skill === "fullstack" && (projectTech.includes("fullstack") || (projectTech.includes("react") && projectTech.includes("node.js")))) return true;
+            return false;
+        });
+
+        let score = Math.round((matchedTech.length / Math.max(allTargetSkills.length, 1)) * 70);
         if (project.hasDeployment) score += 20;
         if (project.description && project.description.length > 50) score += 10;
+        if (project.hasMetrics) score += 10;
+        score = Math.min(Math.max(score, matchedTech.length * 15), 100);
 
         const why = [];
         if (matchedTech.length > 0) {
@@ -865,13 +959,13 @@ const buildCompanyPrepFocus = (companyName, parsedRequirements) => {
 };
 
 export const compareResumeToJob = (resume, jobDescription, externalProfiles = [], options = {}) => {
-    const parsedProfile = resume.parsedProfile?.skills?.length || resume.parsedProfile?.experience?.length
-        ? resume.parsedProfile
-        : parseResumeText(resume.rawText);
+    const parsedProfile = resume.rawText
+        ? parseResumeText(resume.rawText)
+        : (resume.parsedProfile || {});
 
-    const parsedRequirements = jobDescription.parsedRequirements?.requiredSkills?.length
-        ? jobDescription.parsedRequirements
-        : parseJobDescriptionText(jobDescription.rawText);
+    const parsedRequirements = jobDescription.rawText
+        ? parseJobDescriptionText(jobDescription.rawText)
+        : (jobDescription.parsedRequirements || {});
 
     const resumeSkills = unique(parsedProfile.skills || []);
     const projectSkills = unique((parsedProfile.projects || []).flatMap((project) => project.technologies || []));
@@ -913,7 +1007,7 @@ export const compareResumeToJob = (resume, jobDescription, externalProfiles = []
 
     const dsaSkills = requiredSkills.filter((skill) => /data structure|algorithm|dsa|problem solving|competitive/i.test(skill));
     const matchedDsa = dsaSkills.filter((skill) => includesSkill(resumeSkills, skill) || codingEvidence);
-    const matchedProjectSkills = requiredSkills.filter((skill) => includesSkill(projectSkills, skill));
+    const verifiedProjectRequirements = requiredMatches.filter((match) => match.sources.includes("project"));
 
     let jobSpecificScore = 0;
     if (preferredSkills.length > 0) {
@@ -938,7 +1032,7 @@ export const compareResumeToJob = (resume, jobDescription, externalProfiles = []
     const scoreBreakdown = {
         skills: percentage(matchedRequired.length, requiredSkills.length),
         experience: experienceScore,
-        projects: requiredSkills.length ? percentage(matchedProjectSkills.length, requiredSkills.length) : (projectSkills.length ? 75 : 30),
+        projects: requiredSkills.length ? percentage(verifiedProjectRequirements.length, requiredSkills.length) : (projectSkills.length ? 75 : 30),
         dsa: dsaSkills.length ? percentage(matchedDsa.length, dsaSkills.length) : (codingEvidence ? 90 : 65),
         jobSpecific: jobSpecificScore,
     };

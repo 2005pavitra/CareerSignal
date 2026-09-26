@@ -4,6 +4,8 @@ import JobDescription from "../models/JobDescription.js";
 import Resume from "../models/Resume.js";
 import ExternalProfile from "../models/ExternalProfile.js";
 import { compareResumeToJob } from "../services/analysisService.js";
+import { parseResumeText } from "../services/resumeParser.js";
+import { parseJobDescriptionText } from "../services/jobDescriptionParser.js";
 import { generateAiInsights, evaluateMockInterviewAnswer } from "../services/llmService.js";
 import { publishEvent } from "../config/kafka.js";
 import { getRedisClient } from "../config/redis.js";
@@ -59,6 +61,16 @@ export const createAnalysis = async (req, res) => {
         const mode = ["comprehensive", "oa", "technical"].includes(targetType) ? targetType : "comprehensive";
         const comparison = compareResumeToJob(resume, jobDescription, externalProfiles, { days: planDays, targetType: mode });
         const aiInsights = await generateAiInsights(resume, jobDescription, comparison);
+
+        // Self-heal stored profile and requirements in MongoDB
+        if (resume.rawText) {
+            resume.parsedProfile = parseResumeText(resume.rawText);
+            await resume.save().catch(() => {});
+        }
+        if (jobDescription.rawText) {
+            jobDescription.parsedRequirements = parseJobDescriptionText(jobDescription.rawText);
+            await jobDescription.save().catch(() => {});
+        }
 
         // Check if an analysis report for this user, resume, and JD already exists
         let report = await AnalysisReport.findOne({

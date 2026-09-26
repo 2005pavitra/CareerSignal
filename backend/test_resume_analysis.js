@@ -138,3 +138,47 @@ test("compareResumeToJob produces accurate, non-misinterpreted analysis for Pavi
     assert.ok(!report.resumeOptimization.bulletRewrites.some(b => b.original === "Developed backend services using Node.js."));
     assert.ok(report.resumeOptimization.bulletRewrites[0].original.length > 30, "Should use candidate's actual bullet");
 });
+
+test("User's Fullstack Feature Delivery JD is parsed accurately with high project relevance and domain alignment", () => {
+    const userJdText = `
+Fullstack Feature Delivery
+• Design, develop, and ship end-to-end features using ReactJS on the frontend and Node.js on the backend.
+• Translate product requirements into clean, maintainable UI components and backend services.
+• Build reusable components, shared utilities, and scalable patterns to accelerate delivery.
+
+Backend & API Development
+• Develop RESTful APIs and backend modules in Node.js with clear contracts, validation, and error handling.
+• Integrate backend services with frontend workflows, ensuring consistency, reliability, and performance.
+• Implement authentication/authorization flows and secure data handling practices.
+
+Quality, Performance & Collaboration
+• Write unit/integration tests and participate in code reviews to maintain high engineering standards.
+• Optimize frontend rendering and backend response times through profiling and performance tuning.
+• Collaborate with designers, QA, and stakeholders to deliver polished releases and iterate based on feedback.
+
+AI-Enabled Enhancements
+• Contribute to AI-assisted features such as intelligent recommendations, summarization, or workflow automation where applicable.
+• Support integration of AI capabilities into the application while ensuring usability, safety, and measurable outcomes.
+`;
+
+    const parsedJd = parseJobDescriptionText(userJdText);
+    assert.ok(parsedJd.requiredSkills.includes("react"), "React should be detected from ReactJS");
+    assert.ok(parsedJd.requiredSkills.includes("node.js"), "Node.js should be detected");
+    assert.ok(parsedJd.requiredSkills.includes("restful apis"), "RESTful APIs should be detected");
+    assert.ok(parsedJd.requiredSkills.includes("fullstack"), "Fullstack should be detected");
+    assert.ok(parsedJd.requiredSkills.includes("ai"), "AI should be detected");
+
+    const report = compareResumeToJob(
+        { title: "Pavitra_Pandey_Resume", rawText: pavitraResume },
+        { title: "Full Stack Developer", company: "Target Company", rawText: userJdText },
+        [],
+        { days: 14 }
+    );
+
+    assert.ok(report.overallFit >= 80, `Overall fit should be >= 80%, got ${report.overallFit}`);
+    assert.ok(report.scoreBreakdown.projects >= 80, `Projects score should be >= 80%, got ${report.scoreBreakdown.projects}`);
+    assert.equal(report.projectRelevance.rankedProjects[0].name, "CareerSignal");
+    assert.ok(report.projectRelevance.rankedProjects[0].score >= 90, `CareerSignal match score should be >= 90%, got ${report.projectRelevance.rankedProjects[0].score}`);
+    assert.equal(report.projectRelevance.rankedProjects[1].name, "Algo-Vault");
+    assert.ok(report.projectRelevance.rankedProjects[1].score >= 80, `Algo-Vault match score should be >= 80%, got ${report.projectRelevance.rankedProjects[1].score}`);
+});

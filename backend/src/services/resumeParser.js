@@ -2,9 +2,9 @@ export const knownSkills = [
     // Languages
     "javascript", "typescript", "python", "java", "c++", "c#", "go", "golang", "rust", "php", "ruby", "sql", "html", "html5", "css", "css3",
     // Frontend
-    "react", "react.js", "react 19", "vite", "tailwind", "tailwind css", "bootstrap", "next.js", "vue", "angular", "redux", "redux toolkit",
+    "react", "react.js", "react 19", "reactjs", "vite", "tailwind", "tailwind css", "bootstrap", "next.js", "vue", "angular", "redux", "redux toolkit", "ui", "frontend",
     // Backend & APIs
-    "node.js", "express", "express.js", "fastapi", "django", "flask", "spring boot", "rest api", "restful apis", "graphql", "grpc", "websockets",
+    "node.js", "node", "express", "express.js", "fastapi", "django", "flask", "spring boot", "rest api", "restful apis", "rest apis", "rest", "graphql", "grpc", "websockets", "backend", "fullstack", "full stack",
     // Databases & Caching
     "mongodb", "postgresql", "mysql", "redis", "elasticsearch", "cassandra", "dynamodb", "prisma", "mongoose", "dbms", "nosql",
     // Messaging & Streaming
@@ -12,13 +12,13 @@ export const knownSkills = [
     // Cloud & DevOps
     "docker", "docker compose", "kubernetes", "aws", "gcp", "azure", "ci/cd", "github actions", "terraform", "linux", "nginx", "git", "github", "render", "vercel", "postman", "vs code",
     // Architecture & Core
-    "microservices", "system design", "distributed systems", "event-driven architecture", "data structures", "algorithms", "dsa", "oop",
+    "microservices", "system design", "distributed systems", "event-driven architecture", "data structures", "algorithms", "dsa", "oop", "performance tuning", "profiling", "code reviews",
     // Security & Auth
-    "jwt", "oauth",
+    "jwt", "oauth", "authentication", "authorization", "auth",
     // Testing
-    "jest", "unit testing", "pytest",
+    "jest", "unit testing", "unit tests", "integration testing", "integration tests", "pytest", "testing",
     // Specialized & AI / ML
-    "chrome extension", "manifest v3", "groq", "gemini", "langchain", "langgraph", "llm", "rag", "vector db", "prompt engineering"
+    "ai", "artificial intelligence", "chrome extension", "manifest v3", "groq", "gemini", "langchain", "langgraph", "llm", "rag", "vector db", "prompt engineering", "workflow automation"
 ];
 
 const sectionAliases = {
@@ -105,12 +105,24 @@ export const extractSkills = (text) => {
         const regex = new RegExp(`(?:^|[\\s,;()/\\[\\]{}:.-])${escaped}(?:$|[\\s,;()/\\[\\]{}:.-])`, "i");
         if (regex.test(searchableText)) {
             // Normalize variants to canonical forms
-            if (skill === "react 19" || skill === "react.js") {
+            if (["react 19", "react.js", "reactjs"].includes(skill)) {
                 detected.add("react");
+            } else if (skill === "node") {
+                detected.add("node.js");
             } else if (skill === "express.js") {
                 detected.add("express");
+            } else if (["rest api", "rest apis", "rest"].includes(skill)) {
+                detected.add("restful apis");
             } else if (skill === "apache kafka") {
                 detected.add("kafka");
+            } else if (["unit tests", "integration tests", "integration testing", "testing"].includes(skill)) {
+                detected.add("unit testing");
+            } else if (["authorization", "auth"].includes(skill)) {
+                detected.add("authentication");
+            } else if (skill === "artificial intelligence") {
+                detected.add("ai");
+            } else if (skill === "full stack") {
+                detected.add("fullstack");
             } else if (skill === "tailwind css") {
                 detected.add("tailwind");
                 detected.add("tailwind css");
@@ -185,6 +197,7 @@ const extractCleanProjectName = (rawTitle) => {
 
 const isProjectHeaderLine = (line, nextLine, prevLine) => {
     if (!line || isBulletLine(line)) return false;
+    if (/^[a-z]/.test(line.trim())) return false;
     if (/^(tech stack|technologies|tools used):/i.test(line)) return false;
     if (/^(live demo|github|demo|link|http)/i.test(line)) return false;
 
@@ -277,6 +290,19 @@ const parseProjectBlocks = (blocks) => {
     return parseProjects(allLines);
 };
 
+const isExperienceHeader = (line) => {
+    if (!line || isBulletLine(line)) return false;
+    const trimmed = line.trim();
+    if (/^[a-z]/.test(trimmed)) return false;
+
+    const hasDate = /\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b/i.test(trimmed)
+        || /\b(?:present|current|ongoing)\b/i.test(trimmed);
+    const hasRoleOrOrg = /\b(?:engineer|developer|co-head|head|lead|manager|intern|analyst|associate|consultant|founder|director|member|mentor|e-cell|uit-rgpv|company|inc|technologies|ltd|lab|club|team)\b/i.test(trimmed);
+    const hasTitleSeparator = /\s+[—–|]\s+|\s*—\s*/.test(trimmed);
+
+    return (hasDate && (hasRoleOrOrg || hasTitleSeparator)) || (hasRoleOrOrg && hasTitleSeparator);
+};
+
 const parseSingleExperience = (lines) => {
     if (!lines?.length) return null;
 
@@ -284,14 +310,20 @@ const parseSingleExperience = (lines) => {
     const text = lines.join(" ");
     const header = lines[0];
 
-    // Try extracting Role and Company from header like "Technical Co-Head — E-Cell, UIT-RGPV 2023 – Present"
-    const headerParts = header.split(/\s+[—–|]\s+|\s*—\s*/);
-    const role = headerParts[0]?.trim() || header;
+    // Extract date range if present e.g. "2023 – Present" or "Nov 2023 - Present"
+    const dateMatch = header.match(/\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*(?:–|—|-|\s+to\s+)\s*(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:19|20)\d{2}|present|current)\b/i);
+    const duration = dateMatch ? dateMatch[0].trim() : undefined;
+    const headerClean = dateMatch ? header.replace(dateMatch[0], "").trim() : header;
+
+    // Extract Role and Company from header like "Technical Co-Head — E-Cell, UIT-RGPV"
+    const headerParts = headerClean.split(/\s+[—–|]\s+|\s*—\s*/);
+    const role = headerParts[0]?.trim() || headerClean;
     const company = headerParts[1]?.trim() || (lines[1] && !isBulletLine(lines[1]) ? lines[1] : undefined);
 
     return {
         role,
         company,
+        duration,
         rawHeader: header,
         description: text.slice(0, 1500),
         bullets: bullets.length ? bullets : [lines.slice(1).join(" ").slice(0, 500)],
@@ -310,12 +342,7 @@ const parseExperience = (lines) => {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        const isHeader = !isBulletLine(line) && (
-            /\b(?:20\d{2}|19\d{2}|present|current)\b/i.test(line)
-            || /\s+[—–|]\s+|\s*—\s*/.test(line)
-        );
-
-        if (isHeader && currentEntry.length > 0) {
+        if (isExperienceHeader(line) && currentEntry.length > 0) {
             entries.push(currentEntry);
             currentEntry = [line];
         } else {
