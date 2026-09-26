@@ -820,14 +820,20 @@ export default function Report() {
                                 <div className="ats-box ats-missing">
                                     <h4>Missing High-Value Keywords</h4>
                                     <div className="keyword-chip-list">
-                                        {(report.resumeOptimization.atsKeywords.missing || []).map((k) => (
-                                            <span key={k} className="chip chip-missing" onClick={() => {
-                                                navigator.clipboard.writeText(k);
-                                                showToast(`Copied "${k}" to clipboard!`);
-                                            }}>
-                                                + {k}
+                                        {(report.resumeOptimization.atsKeywords.missing || []).length > 0 ? (
+                                            (report.resumeOptimization.atsKeywords.missing || []).map((k) => (
+                                                <span key={k} className="chip chip-missing" onClick={() => {
+                                                    navigator.clipboard.writeText(k);
+                                                    showToast(`Copied "${k}" to clipboard!`);
+                                                }}>
+                                                    + {k}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="chip chip-found" style={{ opacity: 0.85 }}>
+                                                ✓ 100% of core job keywords matched!
                                             </span>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             </div>

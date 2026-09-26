@@ -1,5 +1,5 @@
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 
 const responseSchema = {
     summary: "string",
